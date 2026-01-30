@@ -1,0 +1,11 @@
+STUDENT ID: 2023A7PS0043H
+
+EXPECTED OUTPUT:
+{'columns': ['ID', 'NAME', 'MARKS'],
+ 'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
+
+STUDENT OUTPUT:
+{'columns': ['ID', 'NAME', 'MARKS'],
+ 'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
+
+RESULT: PASS

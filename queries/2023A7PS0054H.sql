@@ -1,0 +1,1 @@
+SELECT id, marks, name FROM Student;

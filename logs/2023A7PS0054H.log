@@ -1,0 +1,20 @@
+STUDENT ID: 2023A7PS0054H
+
+EXPECTED OUTPUT:
+{'columns': ['ID', 'NAME', 'MARKS'],
+ 'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
+
+STUDENT OUTPUT:
+{'columns': ['ID', 'MARKS', 'NAME'],
+ 'rows': [(1, 99, 'Swastik'), (2, 98, 'Sid')]}
+
+DIFF:
+Column mismatch:
+Expected: ['ID', 'NAME', 'MARKS']
+Actual:   ['ID', 'MARKS', 'NAME']
+
+Missing rows:
+{(1, 'Swastik', 99), (2, 'Sid', 98)}
+
+Extra rows:
+{(1, 99, 'Swastik'), (2, 98, 'Sid')}
