@@ -6,12 +6,13 @@ Detailed diffs and SQL errors are written to per-student log files.
 
 ---
 
-## 📦 Requirements
+## Requirements
 
-* Docker
+Note: Docker is optional, if you already have an Oracle Database (XE / Free / 21c / 23c) installed, you can skip Step 1. You may need to change ORACLE_DSN in the config section of main.py to localhost:1521/XE etc.
+
 * Python **3.9+**
+* Docker
 * Internet access (to pull Oracle Docker image)
-* OS: Windows / Linux / macOS
 
 ---
 
