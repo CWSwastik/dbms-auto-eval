@@ -1,20 +1,38 @@
 STUDENT ID: 2023A7PS0054H
+==============================
 
+--- QUERY 1 ---
 EXPECTED OUTPUT:
 {'columns': ['ID', 'NAME', 'MARKS'],
  'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
 
 STUDENT OUTPUT:
-{'columns': ['ID', 'MARKS', 'NAME'],
- 'rows': [(1, 99, 'Swastik'), (2, 98, 'Sid')]}
+{'columns': ['ID', 'NAME', 'MARKS'], 'rows': [(1, 'Swastik', 99)]}
+
+DIFF:
+Missing rows:
+{(2, 'Sid', 98)}
+FINAL STATUS: FAIL
+--------------------
+
+--- QUERY 2 ---
+EXPECTED OUTPUT:
+{'columns': ['COUNT(*)'], 'rows': [(2,)]}
+
+STUDENT OUTPUT:
+{'columns': ['ID', 'NAME', 'MARKS'],
+ 'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
 
 DIFF:
 Column mismatch:
-Expected: ['ID', 'NAME', 'MARKS']
-Actual:   ['ID', 'MARKS', 'NAME']
+Expected: ['COUNT(*)']
+Actual:   ['ID', 'NAME', 'MARKS']
 
 Missing rows:
-{(1, 'Swastik', 99), (2, 'Sid', 98)}
+{(2,)}
 
 Extra rows:
-{(1, 99, 'Swastik'), (2, 98, 'Sid')}
+{(2, 'Sid', 98), (1, 'Swastik', 99)}
+FINAL STATUS: FAIL
+--------------------
+

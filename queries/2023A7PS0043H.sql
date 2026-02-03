@@ -1,9 +1,5 @@
 --1--
 SELECT * FROM Student;
 
-
---2-- 
-SELECT 1 FROM DUAL;
-
---3--
+--2--
 SELECT COUNT(*) FROM Student;

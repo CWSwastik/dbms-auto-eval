@@ -70,8 +70,9 @@ pip install oracledb
 auto-eval/
 │
 ├── main.py                # Evaluation script
+├── check_format.py        # OPTIONAL: Format validator for students
 ├── schema.sql             # Schema + data setup
-├── model_solution.sql     # Correct solution
+├── model_solution.sql     # Correct solution (with --N-- markers)
 │
 ├── queries/               # Student submissions
 │   ├── 2023A7PS0043H.sql
@@ -82,7 +83,7 @@ auto-eval/
 │   ├── 2023A7PS0043H.log
 │   └── 2023A7PS0101H.log
 │
-└── results.csv            # Final grades
+└── results.csv            # Final grades (Q1, Q2, ..., Total)
 ```
 
 ---
@@ -108,37 +109,54 @@ The script **automatically drops all tables** after evaluating each student and 
 
 ## Step 5: Writing `model_solution.sql`
 
-Must contain **one SELECT query**:
+Must contain queries preceded by markers `--N--`:
 
 ```sql
+--1--
 SELECT * FROM Student WHERE marks > 95;
+
+--2--
+SELECT name FROM Student ORDER BY marks DESC;
 ```
 
-This output is treated as the **expected answer**.
+These outputs are treated as the **expected answers** for each question.
 
 ---
 
 ## Step 6: Student SQL files
 
-Each student submits **one `.sql` file**:
-
-```
-queries/2023A7PS0043H.sql
-```
-
-Example:
+Each student submits **one `.sql` file** following the same `--N--` marker format:
 
 ```sql
+--1--
 SELECT * FROM Student WHERE marks > 95;
+
+--2--
+SELECT name FROM Student ORDER BY marks DESC;
 ```
 
-* File name = **Student ID**
-* SQL errors → **FAIL**
-* Output mismatch → **FAIL**
+* File name = **Student ID** (e.g. `2023A7PS0043H.sql`)
+* Each query is evaluated independently.
+* SQL errors in one query do not affect others.
 
 ---
 
-## Step 7: Run the evaluator
+## Step 7: Format Checker (For Students)
+
+Students should verify their file format before submission using `check_format.py`.
+
+```bash
+python check_format.py 2023A7PS0043H.sql
+```
+
+This script checks:
+1. If the **filename** is a valid Student ID.
+2. If all **query markers** (`--1--`, `--2--`, etc.) are present.
+3. If each query ends with a **semicolon**.
+
+---
+
+## Step 8: Run the evaluator
 
 ```bash
 python main.py
@@ -150,10 +168,10 @@ python main.py
 
 ```
 Evaluating student: 2023A7PS0043H
-➡ Result: PASS
+➡ Score: 2/2
 
 Evaluating student: 2023A7PS0101H
-➡ Result: FAIL
+➡ Score: 1/2
 
 ✅ Evaluation complete. Results written to results.csv
 ```
@@ -185,7 +203,7 @@ Missing rows:
 ## Final Output (`results.csv`)
 
 ```csv
-StudentID,Result
-2023A7PS0043H,PASS
-2023A7PS0101H,FAIL
+StudentID,Q1,Q2,Total
+2023A7PS0043H,PASS,PASS,2/2
+2023A7PS0101H,FAIL,PASS,1/2
 ```

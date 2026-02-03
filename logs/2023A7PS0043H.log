@@ -1,5 +1,7 @@
 STUDENT ID: 2023A7PS0043H
+==============================
 
+--- QUERY 1 ---
 EXPECTED OUTPUT:
 {'columns': ['ID', 'NAME', 'MARKS'],
  'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
@@ -9,3 +11,17 @@ STUDENT OUTPUT:
  'rows': [(1, 'Swastik', 99), (2, 'Sid', 98)]}
 
 RESULT: PASS
+FINAL STATUS: PASS
+--------------------
+
+--- QUERY 2 ---
+EXPECTED OUTPUT:
+{'columns': ['COUNT(*)'], 'rows': [(2,)]}
+
+STUDENT OUTPUT:
+{'columns': ['COUNT(*)'], 'rows': [(2,)]}
+
+RESULT: PASS
+FINAL STATUS: PASS
+--------------------
+
