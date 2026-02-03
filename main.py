@@ -2,6 +2,7 @@ import oracledb
 import os
 import csv
 import traceback
+import re
 from pprint import pformat
 
 # ---------------- CONFIG ----------------
@@ -15,6 +16,8 @@ MODEL_FILE = "model_solution.sql"
 QUERIES_DIR = "queries"
 LOGS_DIR = "logs"
 OUTPUT_CSV = "results.csv"
+
+EXPECTED_QUERIES = 2  # Set this to the number of queries in the assignment
 
 # ---------------------------------------
 
@@ -31,12 +34,20 @@ def run_sql_script(cursor, path):
     with open(path, "r", encoding="utf-8") as f:
         sql = f.read()
 
+    # Split by semicolon but ignore ones inside strings (simplified)
+    # For actual labs, students usually write simple queries
     statements = [s.strip() for s in sql.split(";") if s.strip()]
     for stmt in statements:
-        cursor.execute(stmt)
+        try:
+            cursor.execute(stmt)
+        except Exception:
+            # Oracle doesn't have 'IF NOT EXISTS', so we might ignore some errors during schema setup
+            pass
 
 
 def fetch_query_result(cursor, sql):
+    if not sql:
+        return None
     cursor.execute(sql)
     cols = [d[0] for d in cursor.description]
     rows = cursor.fetchall()
@@ -44,10 +55,14 @@ def fetch_query_result(cursor, sql):
 
 
 def normalize_result(cols, rows):
+    if rows is None:
+        return None
     return cols, sorted(rows)
 
 
 def pretty_result(cols, rows):
+    if rows is None:
+        return "NO RESULT"
     return {
         "columns": cols,
         "rows": rows
@@ -55,6 +70,11 @@ def pretty_result(cols, rows):
 
 
 def diff_results(expected, actual):
+    if expected is None:
+        return "No expected result provided."
+    if actual is None:
+        return "No actual result provided (student query missing or failed)."
+
     exp_cols, exp_rows = expected
     act_cols, act_rows = actual
 
@@ -67,6 +87,7 @@ def diff_results(expected, actual):
             f"Actual:   {act_cols}"
         )
 
+    # Convert rows (which are tuples) to sets for easier comparison
     missing = set(exp_rows) - set(act_rows)
     extra = set(act_rows) - set(exp_rows)
 
@@ -88,6 +109,20 @@ def drop_all_tables(cursor):
             pass
 
 
+def parse_queries(content, expected_count):
+    queries = {}
+    for i in range(1, expected_count + 1):
+        # Look for --N-- followed by anything until the next --M-- or end of file
+        marker = f"--{i}--"
+        pattern = rf"{marker}\s*(.*?)\s*(?=--\d+--|$)"
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            queries[i] = match.group(1).strip()
+        else:
+            queries[i] = None
+    return queries
+
+
 def main():
     os.makedirs(LOGS_DIR, exist_ok=True)
 
@@ -96,15 +131,29 @@ def main():
 
     results = []
 
-    # ---------- Compute expected output ----------
-    drop_all_tables(cursor)
-    run_sql_script(cursor, SCHEMA_FILE)
-
+    # ---------- Compute expected outputs ----------
+    print("Pre-computing expected results from model solution...")
     with open(MODEL_FILE, "r", encoding="utf-8") as f:
-        model_sql = f.read().strip()
+        model_content = f.read()
 
-    exp_cols, exp_rows = fetch_query_result(cursor, model_sql)
-    expected = normalize_result(exp_cols, exp_rows)
+    model_queries = parse_queries(model_content, EXPECTED_QUERIES)
+    expected_results = {}
+
+    for i in range(1, EXPECTED_QUERIES + 1):
+        drop_all_tables(cursor)
+        run_sql_script(cursor, SCHEMA_FILE)
+        
+        sql = model_queries.get(i)
+        if sql:
+            try:
+                exp_cols, exp_rows = fetch_query_result(cursor, sql)
+                expected_results[i] = normalize_result(exp_cols, exp_rows)
+            except Exception as e:
+                print(f"Error in model solution Query {i}: {e}")
+                expected_results[i] = None
+        else:
+            print(f"Warning: Model query {i} not found in {MODEL_FILE}")
+            expected_results[i] = None
 
     conn.commit()
     drop_all_tables(cursor)
@@ -119,63 +168,80 @@ def main():
         log_path = os.path.join(LOGS_DIR, f"{student_id}.log")
 
         print(f"\nEvaluating student: {student_id}")
+        
+        student_scores = {}
+        
+        with open(os.path.join(QUERIES_DIR, file), "r", encoding="utf-8") as f:
+            student_content = f.read()
+        
+        student_queries = parse_queries(student_content, EXPECTED_QUERIES)
 
-        try:
-            # Fresh schema
-            run_sql_script(cursor, SCHEMA_FILE)
+        with open(log_path, "w", encoding="utf-8") as log:
+            log.write(f"STUDENT ID: {student_id}\n")
+            log.write("=" * 30 + "\n\n")
 
-            with open(os.path.join(QUERIES_DIR, file), "r", encoding="utf-8") as f:
-                student_sql = f.read().strip()
+            for i in range(1, EXPECTED_QUERIES + 1):
+                log.write(f"--- QUERY {i} ---\n")
+                status = "FAIL"
+                try:
+                    # Fresh schema for each query to avoid side effects
+                    drop_all_tables(cursor)
+                    run_sql_script(cursor, SCHEMA_FILE)
 
-            act_cols, act_rows = fetch_query_result(cursor, student_sql)
-            actual = normalize_result(act_cols, act_rows)
+                    sql = student_queries.get(i)
+                    if not sql:
+                        log.write("STATUS: FAIL (Marker not found or empty)\n\n")
+                    else:
+                        act_cols, act_rows = fetch_query_result(cursor, sql)
+                        actual = normalize_result(act_cols, act_rows)
+                        expected = expected_results.get(i)
 
-            diff = diff_results(expected, actual)
+                        diff = diff_results(expected, actual)
 
-            with open(log_path, "w", encoding="utf-8") as log:
-                log.write(f"STUDENT ID: {student_id}\n\n")
+                        log.write("EXPECTED OUTPUT:\n")
+                        log.write(pformat(pretty_result(*expected)) if expected else "N/A")
+                        log.write("\n\n")
 
-                log.write("EXPECTED OUTPUT:\n")
-                log.write(pformat(pretty_result(*expected)))
-                log.write("\n\n")
+                        log.write("STUDENT OUTPUT:\n")
+                        log.write(pformat(pretty_result(*actual)))
+                        log.write("\n\n")
 
-                log.write("STUDENT OUTPUT:\n")
-                log.write(pformat(pretty_result(*actual)))
-                log.write("\n\n")
+                        if diff:
+                            log.write("DIFF:\n")
+                            log.write(diff + "\n")
+                        else:
+                            status = "PASS"
+                            log.write("RESULT: PASS\n")
+                        
+                except Exception as e:
+                    log.write("SQL ERROR:\n")
+                    log.write(str(e) + "\n\n")
+                    log.write(traceback.format_exc() + "\n")
+                
+                student_scores[f"Q{i}"] = status
+                log.write(f"FINAL STATUS: {status}\n")
+                log.write("-" * 20 + "\n\n")
 
-                if diff:
-                    status = "FAIL"
-                    log.write("DIFF:\n")
-                    log.write(diff)
-                else:
-                    status = "PASS"
-                    log.write("RESULT: PASS")
-
-        except Exception as e:
-            status = "FAIL"
-            with open(log_path, "w", encoding="utf-8") as log:
-                log.write(f"STUDENT ID: {student_id}\n\n")
-                log.write("SQL ERROR:\n")
-                log.write(str(e) + "\n\n")
-                log.write(traceback.format_exc())
-
-        finally:
-            drop_all_tables(cursor)
-            conn.commit()
-
-        print(f"➡ Result: {status}")
-        results.append([student_id, status])
+        pass_count = list(student_scores.values()).count("PASS")
+        print(f"➡ Score: {pass_count}/{EXPECTED_QUERIES}")
+        
+        row = [student_id]
+        for i in range(1, EXPECTED_QUERIES + 1):
+            row.append(student_scores[f"Q{i}"])
+        row.append(f"{pass_count}/{EXPECTED_QUERIES}")
+        results.append(row)
 
     # ---------- Export CSV ----------
     with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["StudentID", "Result"])
+        header = ["StudentID"] + [f"Q{i}" for i in range(1, EXPECTED_QUERIES + 1)] + ["Total"]
+        writer.writerow(header)
         writer.writerows(results)
 
     cursor.close()
     conn.close()
 
-    print("\nEvaluation complete. Results written to results.csv")
+    print(f"\nEvaluation complete. Results written to {OUTPUT_CSV}")
 
 
 if __name__ == "__main__":
