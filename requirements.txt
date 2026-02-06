@@ -1,0 +1,3 @@
+sqlglot
+oracledb
+streamlit
