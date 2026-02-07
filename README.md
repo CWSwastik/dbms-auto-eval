@@ -56,10 +56,10 @@ venv\Scripts\activate   # Windows
 source venv/bin/activate  # Linux/macOS
 ```
 
-Install dependency:
+Install dependencies:
 
 ```bash
-pip install oracledb
+pip install -r requirements.txt
 ```
 
 ---
@@ -197,6 +197,36 @@ DIFF:
 Missing rows:
 {(2, 'Sid', 98)}
 ```
+
+---
+
+## Step 9: Run the Submission Server (Streamlit)
+
+To host the submission portal where students can upload and check their files:
+
+```bash
+streamlit run app.py
+```
+
+- The server will be available at `http://localhost:8501`.
+- It performs real-time formatting and syntax checks before allowing submission.
+- Submissions are stored in the `queries/` directory.
+
+---
+
+## Instructor Configuration
+
+### 1. Setting Expected Query Count
+You must set the `EXPECTED_QUERIES` variable in **two** files to match your assignment:
+- `main.py`: Used by the evaluation script.
+- `check_format.py`: Used by the student script and the Streamlit app.
+
+### 2. Setting Expected Solutions
+- Edit `model_solution.sql` and provide the correct SQL queries for each marker (e.g., `--1--`, `--2--`).
+- These queries will be executed against `schema.sql` to generate the "ground truth" for grading.
+
+### 3. Setting Database Schema
+- Edit `schema.sql` to include all `CREATE TABLE` and `INSERT` statements needed for the lab environment.
 
 ---
 
